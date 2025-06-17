@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
-const DatabaseManager = require("./Database/dbManager");
+const DatabaseManager = require("./database/dbManager");
 
 let mainWindow;
 let dbManager;
