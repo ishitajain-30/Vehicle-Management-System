@@ -3,359 +3,340 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vehicle Management System</title>
+    <title>Gyan Automobile - Vehicle Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="main.css" />
+    <script>
+      // Apply theme on initial load to prevent FOUC (Flash of Unstyled Content)
+      const savedTheme = localStorage.getItem("theme") || "system";
+      if (
+        savedTheme === "dark" ||
+        (savedTheme === "system" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        document.documentElement.classList.add("dark-mode");
+      }
+    </script>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <h1>🚗 Vehicle Management System</h1>
-        <div class="nav-tabs">
-          <button class="nav-btn active" onclick="showSection('dashboard')">
-            Dashboard
-          </button>
-          <button class="nav-btn" onclick="showSection('purchase')">
-            Add Purchase
-          </button>
-          <button class="nav-btn" onclick="showSection('sale')">
-            Add Sale
-          </button>
-          <button class="nav-btn" onclick="showSection('inventory')">
-            Inventory
-          </button>
-          <button class="nav-btn" onclick="showSection('reports')">
-            Reports
-          </button>
-        </div>
-      </div>
-
-      <!-- Dashboard Section -->
-      <div id="dashboard" class="content-section active">
-        <h2>📊 Dashboard Overview</h2>
-        <div class="dashboard-cards" id="dashboardCards">
-          <!-- Dashboard cards will be populated by JavaScript -->
-        </div>
-
-        <div class="search-box">
-          <input
-            type="text"
-            id="globalSearch"
-            placeholder="Search vehicles by chassis number, model, or customer name..."
-          />
-        </div>
-
-        <div class="table-container">
-          <table class="data-table" id="searchResults">
-            <thead>
-              <tr>
-                <th>Chassis No</th>
-                <th>Model</th>
-                <th>Color</th>
-                <th>Purchase Date</th>
-                <th>Customer</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="searchResultsBody">
-              <!-- Search results will be populated here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Purchase Section -->
-      <div id="purchase" class="content-section">
-        <h2>🛒 Add New Purchase</h2>
-        <form id="purchaseForm">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="purchaseDate">Purchase Date</label>
-              <input type="date" id="purchaseDate" required />
-            </div>
-            <div class="form-group">
-              <label for="modelName">Model Name</label>
-              <input
-                type="text"
-                id="modelName"
-                placeholder="e.g., Honda City"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="chassisNo">Chassis Number</label>
-              <input
-                type="text"
-                id="chassisNo"
-                placeholder="Unique chassis number"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="color">Color</label>
-              <input
-                type="text"
-                id="color"
-                placeholder="e.g., Red, Blue"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="purchasePrice">Purchase Price (₹)</label>
-              <input
-                type="number"
-                id="purchasePrice"
-                step="0.01"
-                placeholder="0.00"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="transportCost">Transport Cost (₹)</label>
-              <input
-                type="number"
-                id="transportCost"
-                step="0.01"
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="accessoriesCost">Accessories Cost (₹)</label>
-            <input
-              type="number"
-              id="accessoriesCost"
-              step="0.01"
-              placeholder="0.00"
+    <div class="app-container">
+      <!-- Sidebar Navigation -->
+      <nav class="sidebar">
+        <div>
+          <div class="sidebar-header">
+            <img
+              src="../../assets/icon.png"
+              alt="Logo"
+              class="logo-icon"
+              style="width: 50px; height: 50px"
             />
+            <h3>Gyan Automobile</h3>
           </div>
+          <ul class="nav-menu">
+            <li
+              class="nav-item active"
+              onclick="showSection('dashboard', this)"
+            >
+              <a><span class="nav-icon">📊</span>Dashboard</a>
+            </li>
+            <li class="nav-item" onclick="showSection('purchase', this)">
+              <a><span class="nav-icon">➕</span>Add Purchase</a>
+            </li>
+            <li class="nav-item" onclick="showSection('sale', this)">
+              <a><span class="nav-icon">💰</span>Add Sale</a>
+            </li>
+            <li class="nav-item" onclick="showSection('inventory', this)">
+              <a><span class="nav-icon">📦</span>Inventory</a>
+            </li>
+            <li class="nav-item" onclick="showSection('reports', this)">
+              <a><span class="nav-icon">📈</span>Reports</a>
+            </li>
+          </ul>
+        </div>
+        <div class="sidebar-footer">
+          <div class="theme-switcher">
+            <button id="theme-toggle-light" class="theme-btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            </button>
+            <button id="theme-toggle-dark" class="theme-btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                ></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </nav>
 
-          <button type="submit" class="btn btn-success">Add Purchase</button>
-        </form>
-      </div>
-
-      <!-- Sale Section -->
-      <div id="sale" class="content-section">
-        <h2>💰 Add New Sale</h2>
-        <form id="saleForm">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="saleChassisNo">Select Vehicle</label>
-              <select id="saleChassisNo" required>
-                <option value="">Select chassis number...</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="customerName">Customer Name</label>
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section active">
+          <div class="content-header">
+            <h2>Dashboard Overview</h2>
+            <div class="search-box">
               <input
                 type="text"
-                id="customerName"
-                placeholder="Customer full name"
-                required
+                id="globalSearch"
+                placeholder="Search vehicles..."
               />
             </div>
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="saleDate">Sale Date</label>
-              <input type="date" id="saleDate" required />
-            </div>
-            <div class="form-group">
-              <label for="salesPrice">Sale Price (₹)</label>
-              <input
-                type="number"
-                id="salesPrice"
-                step="0.01"
-                placeholder="0.00"
-                required
-              />
-            </div>
+          <div class="dashboard-cards" id="dashboardCards"></div>
+          <div class="content-header" style="margin-top: 20px">
+            <h2>All Vehicles</h2>
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="insuranceCost">Insurance Cost (₹)</label>
-              <input
-                type="number"
-                id="insuranceCost"
-                step="0.01"
-                placeholder="0.00"
-              />
-            </div>
-            <div class="form-group">
-              <label for="taxRegistrationCost"
-                >Tax & Registration Cost (₹)</label
-              >
-              <input
-                type="number"
-                id="taxRegistrationCost"
-                step="0.01"
-                placeholder="0.00"
-              />
-            </div>
+          <div class="table-container">
+            <table class="data-table" id="dashboardVehicleTable">
+              <thead>
+                <tr>
+                  <th>Chassis No</th>
+                  <th>Model</th>
+                  <th>Purchase Date</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dashboardVehicleBody"></tbody>
+            </table>
           </div>
+        </div>
 
-          <div class="form-row">
+        <!-- Other Sections -->
+        <div id="purchase" class="content-section">
+          <div class="content-header"><h2>Add New Purchase</h2></div>
+          <form id="purchaseForm" class="form-layout"></form>
+        </div>
+        <div id="sale" class="content-section">
+          <div class="content-header"><h2>Add New Sale</h2></div>
+          <form id="saleForm" class="form-layout"></form>
+        </div>
+        <div id="inventory" class="content-section">
+          <div class="content-header"><h2>Vehicle Inventory</h2></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Chassis No</th>
+                  <th>Model</th>
+                  <th>Color</th>
+                  <th>Purchase Date</th>
+                  <th>Purchase Price</th>
+                  <th>Total Cost</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="reports" class="content-section">
+          <div class="content-header"><h2>Profit Reports</h2></div>
+          <div class="filters">
             <div class="form-group">
-              <label for="registrationDate">Registration Date</label>
-              <input type="date" id="registrationDate" />
-            </div>
-            <div class="form-group">
-              <label for="paymentType">Payment Type</label>
-              <select id="paymentType" required>
-                <option value="">Select payment type...</option>
+              <label for="filterPaymentType">Payment Type</label
+              ><select id="filterPaymentType">
+                <option value="">All</option>
                 <option value="cash">Cash</option>
                 <option value="disbursment">Disbursement</option>
                 <option value="bank_transfer">Bank Transfer</option>
                 <option value="return_vehicle">Return Vehicle</option>
               </select>
             </div>
-          </div>
-
-          <button type="submit" class="btn btn-success">Add Sale</button>
-        </form>
-      </div>
-
-      <!-- Inventory Section -->
-      <div id="inventory" class="content-section">
-        <h2>📦 Vehicle Inventory</h2>
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Chassis No</th>
-                <th>Model</th>
-                <th>Color</th>
-                <th>Purchase Date</th>
-                <th>Purchase Price</th>
-                <th>Total Cost</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="inventoryTableBody">
-              <!-- Inventory data will be populated here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Reports Section -->
-      <div id="reports" class="content-section">
-        <h2>📈 Profit Reports</h2>
-
-        <div class="filters">
-          <div class="form-group">
-            <label for="filterPaymentType">Payment Type</label>
-            <select id="filterPaymentType">
-              <option value="">All Payment Types</option>
-              <option value="cash">Cash</option>
-              <option value="disbursment">Disbursement</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="return_vehicle">Return Vehicle</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="filterMonth">Month</label>
-            <select id="filterMonth">
-              <option value="">All Months</option>
-              <option value="01">January</option>
-              <option value="02">February</option>
-              <option value="03">March</option>
-              <option value="04">April</option>
-              <option value="05">May</option>
-              <option value="06">June</option>
-              <option value="07">July</option>
-              <option value="08">August</option>
-              <option value="09">September</option>
-              <option value="10">October</option>
-              <option value="11">November</option>
-              <option value="12">December</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="filterYear">Year</label>
-            <select id="filterYear">
-              <option value="">All Years</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="filterModel">Model</label>
-            <input type="text" id="filterModel" placeholder="Model name" />
-          </div>
-
-          <div class="form-group" style="display: flex; align-items: end">
-            <button type="button" class="btn" onclick="applyFilters()">
-              Apply Filters
+            <div class="form-group">
+              <label for="filterMonth">Month</label
+              ><select id="filterMonth">
+                <option value="">All</option>
+                <option value="01">Jan</option>
+                <option value="02">Feb</option>
+                <option value="03">Mar</option>
+                <option value="04">Apr</option>
+                <option value="05">May</option>
+                <option value="06">Jun</option>
+                <option value="07">Jul</option>
+                <option value="08">Aug</option>
+                <option value="09">Sep</option>
+                <option value="10">Oct</option>
+                <option value="11">Nov</option>
+                <option value="12">Dec</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filterYear">Year</label
+              ><select id="filterYear">
+                <option value="">All</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filterModel">Model</label
+              ><input type="text" id="filterModel" placeholder="Model name" />
+            </div>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="applyFilters()"
+            >
+              Apply
             </button>
           </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Chassis No</th>
+                  <th>Model</th>
+                  <th>Customer</th>
+                  <th>Sale Date</th>
+                  <th>Sale Price</th>
+                  <th>Insurance Cost</th>
+                  <th>Tax/Reg Cost</th>
+                  <th>Profit</th>
+                  <th>Profit %</th>
+                  <th>Payment Type</th>
+                </tr>
+              </thead>
+              <tbody id="reportsTableBody"></tbody>
+            </table>
+          </div>
         </div>
-
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Chassis No</th>
-                <th>Model</th>
-                <th>Customer</th>
-                <th>Purchase Date</th>
-                <th>Sale Date</th>
-                <th>Sale Price</th>
-                <th>Total Cost</th>
-                <th>Profit</th>
-                <th>Profit %</th>
-                <th>Payment Type</th>
-              </tr>
-            </thead>
-            <tbody id="reportsTableBody">
-              <!-- Reports data will be populated here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </main>
     </div>
 
-    <!-- Modal for messages -->
+    <!-- Modals -->
     <div id="messageModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 id="modalTitle">Message</h3>
-          <button class="close-btn" onclick="closeModal()">&times;</button>
+          <h3 id="modalTitle"></h3>
+          <button class="close-btn" onclick="closeModal('messageModal')">
+            &times;
+          </button>
         </div>
         <div id="modalMessage"></div>
-        <div style="margin-top: 20px; text-align: right">
-          <button class="btn" onclick="closeModal()">OK</button>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal('messageModal')">
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="editPurchaseModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Edit Purchase</h3>
+          <button class="close-btn" onclick="closeModal('editPurchaseModal')">
+            &times;
+          </button>
+        </div>
+        <form
+          id="editPurchaseForm"
+          class="form-layout"
+          style="border: none; padding: 0"
+        ></form>
+      </div>
+    </div>
+    <div id="editSaleModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Edit Sale</h3>
+          <button class="close-btn" onclick="closeModal('editSaleModal')">
+            &times;
+          </button>
+        </div>
+        <form
+          id="editSaleForm"
+          class="form-layout"
+          style="border: none; padding: 0"
+        ></form>
+      </div>
+    </div>
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header"><h3 id="confirmModalTitle"></h3></div>
+        <div id="confirmModalMessage"></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button
+          ><button class="btn btn-danger" id="confirmOkBtn">Confirm</button>
         </div>
       </div>
     </div>
 
     <script>
       const { ipcRenderer } = require("electron");
-
-      // Global variables
       let availableVehicles = [];
       let dashboardData = {};
 
-      // Initialize the application
-      document.addEventListener("DOMContentLoaded", function () {
+      // --- Theme Switcher Logic ---
+      function setTheme(theme) {
+        const lightBtn = document.getElementById("theme-toggle-light");
+        const darkBtn = document.getElementById("theme-toggle-dark");
+        if (theme === "dark") {
+          document.documentElement.classList.add("dark-mode");
+          darkBtn.classList.add("active");
+          lightBtn.classList.remove("active");
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.documentElement.classList.remove("dark-mode");
+          lightBtn.classList.add("active");
+          darkBtn.classList.remove("active");
+          localStorage.setItem("theme", "light");
+        }
+      }
+
+      // --- Core Functions ---
+      document.addEventListener("DOMContentLoaded", () => {
+        // Theme initialization
+        const lightBtn = document.getElementById("theme-toggle-light");
+        const darkBtn = document.getElementById("theme-toggle-dark");
+        const currentTheme =
+          document.documentElement.classList.contains("dark-mode");
+        setTheme(currentTheme ? "dark" : "light");
+
+        lightBtn.addEventListener("click", () => setTheme("light"));
+        darkBtn.addEventListener("click", () => setTheme("dark"));
+
+        // App initialization
         loadDashboard();
         loadAvailableVehicles();
         populateYearFilter();
+        renderForms();
 
-        // Set default dates
-        document.getElementById("purchaseDate").valueAsDate = new Date();
-        document.getElementById("saleDate").valueAsDate = new Date();
-
-        // Add event listeners
         document
           .getElementById("purchaseForm")
           .addEventListener("submit", handlePurchaseSubmit);
@@ -363,225 +344,326 @@
           .getElementById("saleForm")
           .addEventListener("submit", handleSaleSubmit);
         document
-          .getElementById("globalSearch")
-          .addEventListener("input", handleGlobalSearch);
+          .getElementById("editPurchaseForm")
+          .addEventListener("submit", handleUpdatePurchase);
+        document
+          .getElementById("editSaleForm")
+          .addEventListener("submit", handleUpdateSale);
 
-        // Debounce search
         let searchTimeout;
         document
           .getElementById("globalSearch")
-          .addEventListener("input", function () {
+          .addEventListener("input", () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(handleGlobalSearch, 300);
           });
       });
 
-      // Navigation functions
-      function showSection(sectionName) {
-        // Hide all sections
-        document.querySelectorAll(".content-section").forEach((section) => {
-          section.classList.remove("active");
-        });
-
-        // Remove active class from all nav buttons
-        document.querySelectorAll(".nav-btn").forEach((btn) => {
-          btn.classList.remove("active");
-        });
-
-        // Show selected section
+      function showSection(sectionName, navElement) {
+        document
+          .querySelectorAll(".content-section")
+          .forEach((s) => s.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((item) => item.classList.remove("active"));
         document.getElementById(sectionName).classList.add("active");
+        navElement.classList.add("active");
 
-        // Add active class to clicked button
-        event.target.classList.add("active");
+        const loadActions = {
+          dashboard: loadDashboard,
+          sale: loadAvailableVehicles,
+          inventory: loadInventory,
+          reports: loadReports,
+        };
+        if (loadActions[sectionName]) loadActions[sectionName]();
+      }
 
-        // Load section-specific data
-        switch (sectionName) {
-          case "dashboard":
-            loadDashboard();
-            break;
-          case "sale":
-            loadAvailableVehicles();
-            break;
-          case "inventory":
-            loadInventory();
-            break;
-          case "reports":
-            loadReports();
-            break;
+      // --- Form Rendering ---
+      function renderForms() {
+        // Add Purchase Form
+        document.getElementById("purchaseForm").innerHTML = `
+                <div class="form-row"><div class="form-group"><label for="purchaseDate">Purchase Date</label><input type="date" id="purchaseDate" name="purchase_date" required /></div><div class="form-group"><label for="modelName">Model Name</label><input type="text" id="modelName" name="model_name" placeholder="e.g., Honda City" required /></div></div>
+                <div class="form-row"><div class="form-group"><label for="chassisNo">Chassis Number</label><input type="text" id="chassisNo" name="chassis_no" placeholder="Unique chassis number" required /></div><div class="form-group"><label for="color">Color</label><input type="text" id="color" name="color" placeholder="e.g., Red, Blue" /></div></div>
+                <div class="form-row"><div class="form-group"><label for="purchasePrice">Purchase Price (₹)</label><input type="number" id="purchasePrice" name="purchase_price" step="0.01" placeholder="0.00" required /></div><div class="form-group"><label for="transportCost">Transport Cost (₹)</label><input type="number" id="transportCost" name="transport_cost" step="0.01" placeholder="0.00" /></div></div>
+                <div class="form-group"><label for="accessoriesCost">Accessories Cost (₹)</label><input type="number" id="accessoriesCost" name="accessories_cost" step="0.01" placeholder="0.00" /></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Add Purchase</button></div>`;
+        document.getElementById("purchaseDate").valueAsDate = new Date();
+
+        // Add Sale Form
+        document.getElementById("saleForm").innerHTML = `
+                <div class="form-row">
+                    <div class="form-group"><label for="saleChassisNo">Select Vehicle</label><select id="saleChassisNo" name="chassis_no" required></select></div>
+                    <div class="form-group"><label for="saleDate">Sale Date</label><input type="date" id="saleDate" name="sale_date" required /></div>
+                </div>
+                <div class="form-group"><label for="paymentType">Payment Type</label><select id="paymentType" name="payment_type" onchange="toggleSaleFields(this.value)"><option value="">Select...</option><option value="cash">Cash</option><option value="disbursment">Disbursement</option><option value="bank_transfer">Bank Transfer</option><option value="return_vehicle">Return Vehicle</option></select></div>
+                <div id="sale-fields-wrapper">
+                    <div class="form-row"><div class="form-group"><label for="customerName">Customer Name</label><input type="text" id="customerName" name="customer_name" placeholder="Customer full name"/></div><div class="form-group"><label for="salesPrice">Sale Price (₹)</label><input type="number" id="salesPrice" name="sales_price" step="0.01" placeholder="0.00" /></div></div>
+                    <div class="form-row"><div class="form-group"><label for="insuranceCost">Insurance Cost (₹)</label><input type="number" id="insuranceCost" name="insurance_cost" step="0.01" placeholder="0.00" /></div><div class="form-group"><label for="taxRegistrationCost">Tax & Registration Cost (₹)</label><input type="number" id="taxRegistrationCost" name="tax_registration_cost" step="0.01" placeholder="0.00" /></div></div>
+                    <div class="form-row"><div class="form-group"><label for="registrationDate">Registration Date</label><input type="date" id="registrationDate" name="registration_date" /></div><div class="form-group"></div></div>
+                </div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Add Sale</button></div>`;
+        document.getElementById("saleDate").valueAsDate = new Date();
+      }
+
+      function toggleSaleFields(paymentType) {
+        const wrapper = document.getElementById("sale-fields-wrapper");
+        if (paymentType === "return_vehicle") {
+          wrapper.style.display = "none";
+        } else {
+          wrapper.style.display = "block";
         }
       }
 
-      // Dashboard functions
+      // --- Dashboard & Data Loading ---
       async function loadDashboard() {
         try {
           const result = await ipcRenderer.invoke("db-get-dashboard-data");
           if (result.success) {
             dashboardData = result.data;
             renderDashboardCards();
-          } else {
+            handleGlobalSearch();
+          } else
             showMessage(
               "Error",
-              "Failed to load dashboard data: " + result.error,
+              `Failed to load dashboard data: ${result.error}`,
               "error"
             );
-          }
         } catch (error) {
           showMessage(
             "Error",
-            "Failed to load dashboard: " + error.message,
+            `Failed to load dashboard: ${error.message}`,
             "error"
           );
         }
       }
 
       function renderDashboardCards() {
-        const cardsContainer = document.getElementById("dashboardCards");
-        cardsContainer.innerHTML = `
-                <div class="dashboard-card">
-                    <h3>${dashboardData.totalVehicles?.count || 0}</h3>
-                    <p>Total Vehicles</p>
-                </div>
-                <div class="dashboard-card">
-                    <h3>${dashboardData.availableVehicles?.count || 0}</h3>
-                    <p>Available Vehicles</p>
-                </div>
-                <div class="dashboard-card">
-                    <h3>${dashboardData.soldVehicles?.count || 0}</h3>
-                    <p>Sold Vehicles</p>
-                </div>
-                <div class="dashboard-card">
-                    <h3>₹${(
-                      dashboardData.totalProfit?.total || 0
-                    ).toLocaleString()}</h3>
-                    <p>Total Profit</p>
-                </div>
-            `;
+        const container = document.getElementById("dashboardCards");
+        container.innerHTML = `
+                <div class="dashboard-card"><h3>${
+                  dashboardData.totalVehicles?.count || 0
+                }</h3><p>Total Vehicles</p></div>
+                <div class="dashboard-card"><h3>${
+                  dashboardData.availableVehicles?.count || 0
+                }</h3><p>Available Vehicles</p></div>
+                <div class="dashboard-card"><h3>${
+                  dashboardData.soldVehicles?.count || 0
+                }</h3><p>Sold Vehicles</p></div>
+                <div class="dashboard-card"><h3>₹${(
+                  dashboardData.totalProfit?.total || 0
+                ).toLocaleString()}</h3><p>Total Profit</p></div>`;
       }
 
-      // Purchase form handling
-      async function handlePurchaseSubmit(event) {
-        event.preventDefault();
-
-        const formData = {
-          purchase_date: document.getElementById("purchaseDate").value,
-          model_name: document.getElementById("modelName").value,
-          chassis_no: document.getElementById("chassisNo").value,
-          color: document.getElementById("color").value,
-          purchase_price: parseFloat(
-            document.getElementById("purchasePrice").value
-          ),
-          transport_cost:
-            parseFloat(document.getElementById("transportCost").value) || 0,
-          accessories_cost:
-            parseFloat(document.getElementById("accessoriesCost").value) || 0,
-        };
-
+      async function handleGlobalSearch() {
+        const searchTerm = document.getElementById("globalSearch").value.trim();
         try {
-          const result = await ipcRenderer.invoke("db-add-purchase", formData);
-          if (result.success) {
-            showMessage(
-              "Success",
-              "Vehicle purchase added successfully!",
-              "success"
-            );
-            document.getElementById("purchaseForm").reset();
-            document.getElementById("purchaseDate").valueAsDate = new Date();
-            loadDashboard();
-          } else {
-            showMessage(
-              "Error",
-              "Failed to add purchase: " + result.error,
-              "error"
-            );
-          }
-        } catch (error) {
-          showMessage(
-            "Error",
-            "Failed to add purchase: " + error.message,
-            "error"
+          const result = await ipcRenderer.invoke(
+            "db-search-vehicles",
+            searchTerm
           );
-        }
-      }
-
-      // Sale form handling
-      async function handleSaleSubmit(event) {
-        event.preventDefault();
-
-        const formData = {
-          chassis_no: document.getElementById("saleChassisNo").value,
-          customer_name: document.getElementById("customerName").value,
-          sale_date: document.getElementById("saleDate").value,
-          sales_price: parseFloat(document.getElementById("salesPrice").value),
-          insurance_cost:
-            parseFloat(document.getElementById("insuranceCost").value) || 0,
-          tax_registration_cost:
-            parseFloat(document.getElementById("taxRegistrationCost").value) ||
-            0,
-          registration_date: document.getElementById("registrationDate").value,
-          payment_type: document.getElementById("paymentType").value,
-        };
-
-        try {
-          const result = await ipcRenderer.invoke("db-add-sale", formData);
-          if (result.success) {
-            showMessage(
-              "Success",
-              "Vehicle sale added successfully!",
-              "success"
-            );
-            document.getElementById("saleForm").reset();
-            document.getElementById("saleDate").valueAsDate = new Date();
-            loadAvailableVehicles();
-            loadDashboard();
-          } else {
-            showMessage(
-              "Error",
-              "Failed to add sale: " + result.error,
-              "error"
-            );
-          }
+          if (result.success) renderDashboardVehicleTable(result.data);
+          else showMessage("Error", `Search failed: ${result.error}`, "error");
         } catch (error) {
-          showMessage("Error", "Failed to add sale: " + error.message, "error");
+          showMessage("Error", `Search failed: ${error.message}`, "error");
         }
       }
 
-      // Load available vehicles for sale dropdown
-      async function loadAvailableVehicles() {
-        try {
-          const result = await ipcRenderer.invoke("db-get-available-vehicles");
-          if (result.success) {
-            availableVehicles = result.data;
-            populateVehicleDropdown();
+      function renderDashboardVehicleTable(vehicles) {
+        const tbody = document.getElementById("dashboardVehicleBody");
+        tbody.innerHTML = "";
+        if (!vehicles || vehicles.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6">No vehicles found.</td></tr>';
+          return;
+        }
+        vehicles.forEach((v) => {
+          const row = tbody.insertRow();
+          const isSold = !!v.sale_date;
+          const status = isSold
+            ? v.payment_type === "return_vehicle"
+              ? "Returned"
+              : "Sold"
+            : "Available";
+          const statusClass = isSold
+            ? v.payment_type === "return_vehicle"
+              ? "status-returned"
+              : "status-sold"
+            : "status-available";
+
+          let actions = `<button class="btn-action btn-view" onclick="openViewModal('${v.chassis_no}')">View</button>`;
+          if (isSold) {
+            actions += `<button class="btn-action btn-edit" onclick="openEditSaleModal('${v.chassis_no}')">Edit Sale</button>`;
           } else {
-            showMessage(
-              "Error",
-              "Failed to load available vehicles: " + result.error,
-              "error"
-            );
+            actions += `<button class="btn-action btn-edit" onclick="openEditPurchaseModal('${v.chassis_no}')">Edit Purchase</button>
+                                <button class="btn-action btn-return" onclick="confirmReturnVehicle('${v.chassis_no}')">Return</button>`;
           }
-        } catch (error) {
-          showMessage(
-            "Error",
-            "Failed to load vehicles: " + error.message,
-            "error"
-          );
-        }
-      }
 
-      function populateVehicleDropdown() {
-        const dropdown = document.getElementById("saleChassisNo");
-        dropdown.innerHTML =
-          '<option value="">Select chassis number...</option>';
-
-        availableVehicles.forEach((vehicle) => {
-          const option = document.createElement("option");
-          option.value = vehicle.chassis_no;
-          option.textContent = `${vehicle.chassis_no} - ${vehicle.model_name} (${vehicle.color})`;
-          dropdown.appendChild(option);
+          row.innerHTML = `<td>${v.chassis_no}</td><td>${
+            v.model_name
+          }</td><td>${formatDate(v.purchase_date)}</td>
+                        <td>${
+                          v.customer_name || "-"
+                        }</td><td><span class="status ${statusClass}">${status}</span></td><td class="action-buttons">${actions}</td>`;
         });
       }
 
-      // Load inventory
+      // --- Form Submissions (Create & Update) ---
+      async function handlePurchaseSubmit(e) {
+        e.preventDefault();
+        await submitForm(
+          e.target,
+          "db-add-purchase",
+          "Purchase added successfully!"
+        );
+      }
+      async function handleSaleSubmit(e) {
+        e.preventDefault();
+        await submitForm(
+          e.target,
+          "db-add-sale",
+          "Sale recorded successfully!"
+        );
+      }
+      async function handleUpdatePurchase(e) {
+        e.preventDefault();
+        await submitForm(
+          e.target,
+          "db-update-purchase",
+          "Purchase updated successfully!",
+          "editPurchaseModal"
+        );
+      }
+      async function handleUpdateSale(e) {
+        e.preventDefault();
+        await submitForm(
+          e.target,
+          "db-update-sale",
+          "Sale updated successfully!",
+          "editSaleModal"
+        );
+      }
+
+      async function submitForm(
+        formElement,
+        ipcChannel,
+        successMessage,
+        modalToClose = null
+      ) {
+        const formData = Object.fromEntries(
+          new FormData(formElement).entries()
+        );
+        try {
+          const result = await ipcRenderer.invoke(ipcChannel, formData);
+          if (result.success) {
+            showMessage("Success", successMessage, "success");
+            formElement.reset();
+            if (formElement.id === "saleForm") toggleSaleFields("");
+            if (modalToClose) closeModal(modalToClose);
+            loadDashboard();
+            loadAvailableVehicles();
+          } else {
+            showMessage("Error", `Operation failed: ${result.error}`, "error");
+          }
+        } catch (error) {
+          showMessage("Error", `An error occurred: ${error.message}`, "error");
+        }
+      }
+
+      // --- Edit Modals ---
+      async function openEditPurchaseModal(chassisNo) {
+        const result = await ipcRenderer.invoke("db-get-vehicle", chassisNo);
+        if (!result.success) return showMessage("Error", result.error, "error");
+        const v = result.data;
+        document.getElementById("editPurchaseForm").innerHTML = `
+                <input type="hidden" name="chassis_no" value="${v.chassis_no}" />
+                <div class="form-row"><div class="form-group"><label>Purchase Date</label><input type="date" name="purchase_date" value="${v.purchase_date}" required></div><div class="form-group"><label>Model Name</label><input type="text" name="model_name" value="${v.model_name}" required></div></div>
+                <div class="form-row"><div class="form-group"><label>Color</label><input type="text" name="color" value="${v.color}"></div><div class="form-group"><label>Purchase Price</label><input type="number" name="purchase_price" value="${v.purchase_price}" step="0.01" required></div></div>
+                <div class="form-row"><div class="form-group"><label>Transport Cost</label><input type="number" name="transport_cost" value="${v.transport_cost}" step="0.01"></div><div class="form-group"><label>Accessories Cost</label><input type="number" name="accessories_cost" value="${v.accessories_cost}" step="0.01"></div></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Save Changes</button></div>`;
+        openModal("editPurchaseModal");
+      }
+      async function openEditSaleModal(chassisNo) {
+        const result = await ipcRenderer.invoke("db-get-vehicle", chassisNo);
+        if (!result.success) return showMessage("Error", result.error, "error");
+        const v = result.data;
+        document.getElementById("editSaleForm").innerHTML = `
+                <input type="hidden" name="chassis_no" value="${
+                  v.chassis_no
+                }" />
+                <div class="form-row"><div class="form-group"><label>Customer</label><input type="text" name="customer_name" value="${
+                  v.customer_name
+                }" required></div><div class="form-group"><label>Sale Date</label><input type="date" name="sale_date" value="${
+          v.sale_date
+        }" required></div></div>
+                <div class="form-row"><div class="form-group"><label>Sale Price</label><input type="number" name="sales_price" value="${
+                  v.sales_price
+                }" step="0.01"></div><div class="form-group"><label>Insurance</label><input type="number" name="insurance_cost" value="${
+          v.insurance_cost
+        }" step="0.01"></div></div>
+                <div class="form-row"><div class="form-group"><label>Tax/Reg Cost</label><input type="number" name="tax_registration_cost" value="${
+                  v.tax_registration_cost
+                }" step="0.01"></div><div class="form-group"><label>Reg Date</label><input type="date" name="registration_date" value="${
+          v.registration_date || ""
+        }"></div></div>
+                <div class="form-group"><label>Payment Type</label><select name="payment_type" required><option value="cash" ${
+                  v.payment_type === "cash" ? "selected" : ""
+                }>Cash</option><option value="disbursment" ${
+          v.payment_type === "disbursment" ? "selected" : ""
+        }>Disbursement</option><option value="bank_transfer" ${
+          v.payment_type === "bank_transfer" ? "selected" : ""
+        }>Bank Transfer</option><option value="return_vehicle" ${
+          v.payment_type === "return_vehicle" ? "selected" : ""
+        }>Return Vehicle</option></select></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Save Changes</button></div>`;
+        openModal("editSaleModal");
+      }
+      async function openViewModal(chassisNo) {
+        const result = await ipcRenderer.invoke("db-get-vehicle", chassisNo);
+        if (!result.success) return showMessage("Error", result.error, "error");
+        const v = result.data;
+        let details = `<strong>Chassis No:</strong> ${v.chassis_no}<br><strong>Model:</strong> ${v.model_name}<br><strong>Purchase Price:</strong> $${v.purchase_price}`;
+        if (v.sale_date) {
+          details += `<hr><strong>Customer:</strong> ${v.customer_name}<br><strong>Sale Price:</strong> $${v.sales_price}`;
+        }
+        showMessage("Vehicle Details", details);
+      }
+
+      // --- Vehicle Return ---
+      function confirmReturnVehicle(chassisNo) {
+        showConfirm(
+          "Confirm Return",
+          `Are you sure you want to mark vehicle ${chassisNo} as returned? This cannot be undone.`,
+          async () => {
+            try {
+              const result = await ipcRenderer.invoke("db-return-vehicle", {
+                chassis_no: chassisNo,
+                sale_date: new Date().toISOString().split("T")[0],
+              });
+              if (result.success) {
+                showMessage(
+                  "Success",
+                  `Vehicle ${chassisNo} has been marked as returned.`,
+                  "success"
+                );
+                loadDashboard();
+              } else {
+                showMessage(
+                  "Error",
+                  `Failed to return vehicle: ${result.error}`,
+                  "error"
+                );
+              }
+            } catch (error) {
+              showMessage(
+                "Error",
+                `An error occurred: ${error.message}`,
+                "error"
+              );
+            }
+          }
+        );
+      }
+
+      // --- Other Sections (Inventory, Reports) ---
       async function loadInventory() {
         try {
           const result = await ipcRenderer.invoke("db-get-available-vehicles");
@@ -602,11 +684,9 @@
           );
         }
       }
-
       function renderInventoryTable(vehicles) {
         const tbody = document.getElementById("inventoryTableBody");
         tbody.innerHTML = "";
-
         vehicles.forEach((vehicle) => {
           const totalCost =
             vehicle.purchase_price +
@@ -614,40 +694,20 @@
             (vehicle.accessories_cost || 0);
           const row = document.createElement("tr");
           row.innerHTML = `
-                    <td>${vehicle.chassis_no}</td>
-                    <td>${vehicle.model_name}</td>
-                    <td>${vehicle.color}</td>
-                    <td>${formatDate(vehicle.purchase_date)}</td>
-                    <td>₹${vehicle.purchase_price.toLocaleString()}</td>
-                    <td>₹${totalCost.toLocaleString()}</td>
-                    <td><span style="color: #28a745; font-weight: bold;">Available</span></td>
-                `;
+                        <td>${vehicle.chassis_no}</td>
+                        <td>${vehicle.model_name}</td>
+                        <td>${vehicle.color}</td>
+                        <td>${formatDate(vehicle.purchase_date)}</td>
+                        <td>$${vehicle.purchase_price.toLocaleString()}</td>
+                        <td>$${totalCost.toLocaleString()}</td>
+                        <td><span class="status status-available">Available</span></td>
+                    `;
           tbody.appendChild(row);
         });
       }
-
-      // Reports functions
       async function loadReports() {
-        try {
-          const result = await ipcRenderer.invoke("db-get-profit-report", {});
-          if (result.success) {
-            renderReportsTable(result.data);
-          } else {
-            showMessage(
-              "Error",
-              "Failed to load reports: " + result.error,
-              "error"
-            );
-          }
-        } catch (error) {
-          showMessage(
-            "Error",
-            "Failed to load reports: " + error.message,
-            "error"
-          );
-        }
+        applyFilters();
       }
-
       async function applyFilters() {
         const filters = {
           payment_type: document.getElementById("filterPaymentType").value,
@@ -655,153 +715,244 @@
           year: document.getElementById("filterYear").value,
           model_name: document.getElementById("filterModel").value,
         };
-
-        // Remove empty filters
         Object.keys(filters).forEach((key) => {
           if (!filters[key]) delete filters[key];
         });
-
-        try {
-          const result = await ipcRenderer.invoke(
-            "db-get-profit-report",
-            filters
+        const result = await ipcRenderer.invoke(
+          "db-get-profit-report",
+          filters
+        );
+        if (result.success) renderReportsTable(result.data);
+        else
+          showMessage(
+            "Error",
+            `Failed to apply filters: ${result.error}`,
+            "error"
           );
+      }
+
+      function renderReportsTable(reports) {
+        const tbody = document.getElementById("reportsTableBody");
+        tbody.innerHTML = "";
+        reports.forEach((r) => {
+          const profitClass =
+            r.profit >= 0 ? "profit-positive" : "profit-negative";
+          tbody.insertRow().innerHTML = `<td>${r.chassis_no}</td><td>${
+            r.model_name
+          }</td><td>${r.customer_name}</td>
+                        <td>${formatDate(
+                          r.sale_date
+                        )}</td><td>$${r.sales_price?.toLocaleString()}</td><td>$${r.insurance_cost?.toLocaleString()}</td>
+                        <td>$${r.tax_registration_cost?.toLocaleString()}</td><td class="${profitClass}">$${r.profit?.toLocaleString()}</td>
+                        <td class="${profitClass}">${
+            r.profit_percentage
+          }%</td><td>${r.payment_type}</td>`;
+        });
+      }
+
+      // --- Utilities ---
+      async function loadAvailableVehicles() {
+        const result = await ipcRenderer.invoke("db-get-available-vehicles");
+        if (result.success) {
+          const dropdown = document.getElementById("saleChassisNo");
+          dropdown.innerHTML =
+            '<option value="">Select chassis number...</option>';
+          result.data.forEach((v) => {
+            dropdown.innerHTML += `<option value="${v.chassis_no}">${v.chassis_no} - ${v.model_name}</option>`;
+          });
+        }
+      }
+      function populateYearFilter() {
+        const yearSelect = document.getElementById("filterYear");
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear; y >= currentYear - 10; y--) {
+          yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+        }
+      }
+      function formatDate(dateString) {
+        return dateString
+          ? new Date(dateString).toISOString().split("T")[0]
+          : "-";
+      }
+
+      // --- Modals ---
+      function openModal(modalId) {
+        document.getElementById(modalId).style.display = "flex";
+      }
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+      }
+      function showMessage(title, message, type = "") {
+        document.getElementById("modalTitle").textContent = title;
+        document.getElementById("modalMessage").innerHTML = message;
+        const modalContent = document.querySelector(
+          "#messageModal .modal-content"
+        );
+        modalContent.className = "modal-content"; // reset classes
+        if (type) modalContent.classList.add(type);
+        openModal("messageModal");
+      }
+      function showConfirm(title, message, onConfirm) {
+        document.getElementById("confirmModalTitle").textContent = title;
+        document.getElementById("confirmModalMessage").textContent = message;
+        const okBtn = document.getElementById("confirmOkBtn");
+        const cancelBtn = document.getElementById("confirmCancelBtn");
+        const newOkBtn = okBtn.cloneNode(true); // a trick to remove old event listeners
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+        newOkBtn.onclick = () => {
+          closeModal("confirmModal");
+          onConfirm();
+        };
+        cancelBtn.onclick = () => closeModal("confirmModal");
+        openModal("confirmModal");
+      }
+      window.onclick = (e) => {
+        if (e.target.classList.contains("modal")) closeModal(e.target.id);
+      };
+      openEditPurchaseModal = async function (chassisNo) {
+        const result = await ipcRenderer.invoke("db-get-vehicle", chassisNo);
+        if (!result.success) return showMessage("Error", result.error, "error");
+        const v = result.data;
+        document.getElementById(
+          "editPurchaseForm"
+        ).innerHTML = `<input type="hidden" name="chassis_no" value="${v.chassis_no}" /><div class="form-row"><div class="form-group"><label>Purchase Date</label><input type="date" name="purchase_date" value="${v.purchase_date}" required></div><div class="form-group"><label>Model Name</label><input type="text" name="model_name" value="${v.model_name}" required></div></div><div class="form-row"><div class="form-group"><label>Color</label><input type="text" name="color" value="${v.color}"></div><div class="form-group"><label>Purchase Price</label><input type="number" name="purchase_price" value="${v.purchase_price}" step="0.01" required></div></div><div class="form-row"><div class="form-group"><label>Transport Cost</label><input type="number" name="transport_cost" value="${v.transport_cost}" step="0.01"></div><div class="form-group"><label>Accessories Cost</label><input type="number" name="accessories_cost" value="${v.accessories_cost}" step="0.01"></div></div><div class="form-actions"><button type="submit" class="btn btn-primary">Save Changes</button></div>`;
+        openModal("editPurchaseModal");
+      };
+      openEditSaleModal = async function (chassisNo) {
+        const result = await ipcRenderer.invoke("db-get-vehicle", chassisNo);
+        if (!result.success) return showMessage("Error", result.error, "error");
+        const v = result.data;
+        document.getElementById(
+          "editSaleForm"
+        ).innerHTML = `<input type="hidden" name="chassis_no" value="${
+          v.chassis_no
+        }" /><div class="form-row"><div class="form-group"><label>Customer</label><input type="text" name="customer_name" value="${
+          v.customer_name
+        }" required></div><div class="form-group"><label>Sale Date</label><input type="date" name="sale_date" value="${
+          v.sale_date
+        }" required></div></div><div class="form-row"><div class="form-group"><label>Sale Price</label><input type="number" name="sales_price" value="${
+          v.sales_price
+        }" step="0.01"></div><div class="form-group"><label>Insurance</label><input type="number" name="insurance_cost" value="${
+          v.insurance_cost
+        }" step="0.01"></div></div><div class="form-row"><div class="form-group"><label>Tax/Reg Cost</label><input type="number" name="tax_registration_cost" value="${
+          v.tax_registration_cost
+        }" step="0.01"></div><div class="form-group"><label>Reg Date</label><input type="date" name="registration_date" value="${
+          v.registration_date || ""
+        }"></div></div><div class="form-group"><label>Payment Type</label><select name="payment_type" required><option value="cash" ${
+          v.payment_type === "cash" ? "selected" : ""
+        }>Cash</option><option value="disbursment" ${
+          v.payment_type === "disbursment" ? "selected" : ""
+        }>Disbursement</option><option value="bank_transfer" ${
+          v.payment_type === "bank_transfer" ? "selected" : ""
+        }>Bank Transfer</option><option value="return_vehicle" ${
+          v.payment_type === "return_vehicle" ? "selected" : ""
+        }>Return Vehicle</option></select></div><div class="form-actions"><button type="submit" class="btn btn-primary">Save Changes</button></div>`;
+        openModal("editSaleModal");
+      };
+      openViewModal = async function (chassisNo) {
+        const result = await ipcRenderer.invoke("db-get-vehicle", chassisNo);
+        if (!result.success) return showMessage("Error", result.error, "error");
+        const v = result.data;
+        let details = `<strong>Chassis No:</strong> ${v.chassis_no}<br><strong>Model:</strong> ${v.model_name}<br><strong>Purchase Price:</strong> ₹${v.purchase_price}`;
+        if (v.sale_date) {
+          details += `<hr><strong>Customer:</strong> ${v.customer_name}<br><strong>Sale Price:</strong> ₹${v.sales_price}`;
+        }
+        showMessage("Vehicle Details", details);
+      };
+      loadInventory = async function () {
+        try {
+          const result = await ipcRenderer.invoke("db-get-available-vehicles");
           if (result.success) {
-            renderReportsTable(result.data);
+            renderInventoryTable(result.data);
           } else {
             showMessage(
               "Error",
-              "Failed to apply filters: " + result.error,
+              "Failed to load inventory: " + result.error,
               "error"
             );
           }
         } catch (error) {
           showMessage(
             "Error",
-            "Failed to apply filters: " + error.message,
+            "Failed to load inventory: " + error.message,
             "error"
           );
         }
-      }
-
-      function renderReportsTable(reports) {
+      };
+      renderInventoryTable = function (vehicles) {
+        const tbody = document.getElementById("inventoryTableBody");
+        tbody.innerHTML = "";
+        vehicles.forEach((vehicle) => {
+          const totalCost =
+            vehicle.purchase_price +
+            (vehicle.transport_cost || 0) +
+            (vehicle.accessories_cost || 0);
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${vehicle.chassis_no}</td><td>${
+            vehicle.model_name
+          }</td><td>${vehicle.color}</td><td>${formatDate(
+            vehicle.purchase_date
+          )}</td><td>₹${vehicle.purchase_price.toLocaleString()}</td><td>₹${totalCost.toLocaleString()}</td><td><span class="status status-available">Available</span></td>`;
+          tbody.appendChild(row);
+        });
+      };
+      renderReportsTable = function (reports) {
         const tbody = document.getElementById("reportsTableBody");
         tbody.innerHTML = "";
-
-        reports.forEach((report) => {
-          const totalCost =
-            report.purchase_price +
-            (report.transport_cost || 0) +
-            (report.accessories_cost || 0) +
-            (report.insurance_cost || 0) +
-            (report.tax_registration_cost || 0);
-
-          const row = document.createElement("tr");
-          const profitColor = report.profit >= 0 ? "#28a745" : "#dc3545";
-
-          row.innerHTML = `
-                    <td>${report.chassis_no}</td>
-                    <td>${report.model_name}</td>
-                    <td>${report.customer_name}</td>
-                    <td>${formatDate(report.purchase_date)}</td>
-                    <td>${formatDate(report.sale_date)}</td>
-                    <td>₹${report.sales_price.toLocaleString()}</td>
-                    <td>₹${totalCost.toLocaleString()}</td>
-                    <td style="color: ${profitColor}; font-weight: bold;">₹${report.profit.toLocaleString()}</td>
-                    <td style="color: ${profitColor}; font-weight: bold;">${
-            report.profit_percentage
-          }%</td>
-                    <td>${report.payment_type}</td>
-                `;
-          tbody.appendChild(row);
+        reports.forEach((r) => {
+          const profitClass =
+            r.profit >= 0 ? "profit-positive" : "profit-negative";
+          tbody.insertRow().innerHTML = `<td>${r.chassis_no}</td><td>${
+            r.model_name
+          }</td><td>${r.customer_name}</td><td>${formatDate(
+            r.sale_date
+          )}</td><td>₹${r.sales_price?.toLocaleString()}</td><td>₹${r.insurance_cost?.toLocaleString()}</td><td>₹${r.tax_registration_cost?.toLocaleString()}</td><td class="${profitClass}">₹${r.profit?.toLocaleString()}</td><td class="${profitClass}">${
+            r.profit_percentage
+          }%</td><td>${r.payment_type}</td>`;
         });
-      }
-
-      // Search functionality
-      async function handleGlobalSearch() {
-        const searchTerm = document.getElementById("globalSearch").value.trim();
-
-        if (searchTerm.length < 2) {
-          document.getElementById("searchResultsBody").innerHTML = "";
-          return;
+      };
+      loadAvailableVehicles = async function () {
+        const result = await ipcRenderer.invoke("db-get-available-vehicles");
+        if (result.success) {
+          const dropdown = document.getElementById("saleChassisNo");
+          dropdown.innerHTML =
+            '<option value="">Select chassis number...</option>';
+          result.data.forEach((v) => {
+            dropdown.innerHTML += `<option value="${v.chassis_no}">${v.chassis_no} - ${v.model_name}</option>`;
+          });
         }
-
-        try {
-          const result = await ipcRenderer.invoke(
-            "db-search-vehicles",
-            searchTerm
-          );
-          if (result.success) {
-            renderSearchResults(result.data);
-          } else {
-            showMessage("Error", "Search failed: " + result.error, "error");
-          }
-        } catch (error) {
-          showMessage("Error", "Search failed: " + error.message, "error");
-        }
-      }
-
-      function renderSearchResults(vehicles) {
-        const tbody = document.getElementById("searchResultsBody");
-        tbody.innerHTML = "";
-
-        vehicles.forEach((vehicle) => {
-          const row = document.createElement("tr");
-          const status = vehicle.customer_name ? "Sold" : "Available";
-          const statusColor = vehicle.customer_name ? "#dc3545" : "#28a745";
-
-          row.innerHTML = `
-                    <td>${vehicle.chassis_no}</td>
-                    <td>${vehicle.model_name}</td>
-                    <td>${vehicle.color}</td>
-                    <td>${formatDate(vehicle.purchase_date)}</td>
-                    <td>${vehicle.customer_name || "-"}</td>
-                    <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
-                `;
-          tbody.appendChild(row);
-        });
-      }
-
-      // Utility functions
-      function populateYearFilter() {
+      };
+      populateYearFilter = function () {
         const yearSelect = document.getElementById("filterYear");
         const currentYear = new Date().getFullYear();
-
-        for (let year = currentYear; year >= currentYear - 10; year--) {
-          const option = document.createElement("option");
-          option.value = year;
-          option.textContent = year;
-          yearSelect.appendChild(option);
+        for (let y = currentYear; y >= currentYear - 10; y--) {
+          yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
         }
-      }
-
-      function formatDate(dateString) {
-        if (!dateString) return "-";
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-IN");
-      }
-
-      function showMessage(title, message, type) {
+      };
+      showMessage = function (title, message, type = "") {
         document.getElementById("modalTitle").textContent = title;
-        document.getElementById("modalMessage").textContent = message;
-        document.getElementById("messageModal").style.display = "block";
-
-        // Add color based on type
-        const modal = document.querySelector(".modal-content");
-        modal.style.borderLeft =
-          type === "success" ? "5px solid #28a745" : "5px solid #dc3545";
-      }
-
-      function closeModal() {
-        document.getElementById("messageModal").style.display = "none";
-      }
-
-      // Close modal when clicking outside
-      window.onclick = function (event) {
-        const modal = document.getElementById("messageModal");
-        if (event.target === modal) {
-          closeModal();
-        }
+        document.getElementById("modalMessage").innerHTML = message;
+        const modalContent = document.querySelector(
+          "#messageModal .modal-content"
+        );
+        modalContent.className = "modal-content";
+        if (type) modalContent.classList.add(type);
+        openModal("messageModal");
+      };
+      showConfirm = function (title, message, onConfirm) {
+        document.getElementById("confirmModalTitle").textContent = title;
+        document.getElementById("confirmModalMessage").textContent = message;
+        const okBtn = document.getElementById("confirmOkBtn");
+        const cancelBtn = document.getElementById("confirmCancelBtn");
+        const newOkBtn = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+        newOkBtn.onclick = () => {
+          closeModal("confirmModal");
+          onConfirm();
+        };
+        cancelBtn.onclick = () => closeModal("confirmModal");
+        openModal("confirmModal");
       };
     </script>
   </body>

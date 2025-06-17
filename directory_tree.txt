@@ -1,0 +1,15 @@
+ishita
+├── assets
+│   └── icon.png
+├── src
+│   ├── Database
+│   │   ├── dbManager.js
+│   │   └── Model.docx
+│   ├── renderer
+│   │   ├── index.html
+│   │   └── main.css
+│   └── main.js
+├── package.json
+├── README.md
+├── package-lock.json
+└── tree.py

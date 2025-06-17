@@ -223,7 +223,7 @@ For technical support or feature requests:
 
 ## 📄 License
 
-MIT License - Feel free to modify and distribute as needed.
+License - Feel free to modify and distribute as needed.
 
 ---
 
