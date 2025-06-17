@@ -1,56 +1,63 @@
 {
-    "name": "vehicle-management-system",
-    "version": "1.0.0",
-    "description": "Complete Vehicle Management System for Dealers",
-    "main": "src/main.js",
-    "scripts": {
-      "start": "electron .",
-      "dev": "electron . --debug",
-      "build": "electron-builder",
-      "build-win": "electron-builder --win",
-      "build-mac": "electron-builder --mac",
-      "build-linux": "electron-builder --linux",
-      "dist": "electron-builder --publish=never"
+  "name": "vehicle-management-system",
+  "version": "1.0.0",
+  "description": "Complete Vehicle Management System for Dealers",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --debug",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "dist": "electron-builder --publish=never",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "vehicle",
+    "management",
+    "electron",
+    "sqlite"
+  ],
+  "author": "Gyan Infotech",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "path": "^0.12.7"
+  },
+  "build": {
+    "appId": "com.yourcompany.vehicle-management",
+    "productName": "Vehicle Management System",
+    "directories": {
+      "output": "dist"
     },
-    "keywords": ["vehicle", "management", "electron", "sqlite"],
-    "author": "Your Name",
-    "license": "MIT",
-    "devDependencies": {
-      "electron": "^27.0.0",
-      "electron-builder": "^24.6.4"
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
     },
-    "dependencies": {
-      "sqlite3": "^5.1.6",
-      "path": "^0.12.7"
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
     },
-    "build": {
-      "appId": "com.yourcompany.vehicle-management",
-      "productName": "Vehicle Management System",
-      "directories": {
-        "output": "dist"
-      },
-      "files": [
-        "src/**/*",
-        "assets/**/*",
-        "node_modules/**/*"
-      ],
-      "win": {
-        "target": "nsis",
-        "icon": "assets/icon.ico"
-      },
-      "mac": {
-        "target": "dmg",
-        "icon": "assets/icon.icns"
-      },
-      "linux": {
-        "target": "AppImage",
-        "icon": "assets/icon.png"
-      },
-      "nsis": {
-        "oneClick": false,
-        "allowToChangeInstallationDirectory": true,
-        "createDesktopShortcut": true,
-        "createStartMenuShortcut": true
-      }
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
+}

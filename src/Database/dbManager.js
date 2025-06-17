@@ -1,21 +1,30 @@
-const sqlite3 = require("sqlite3").verbose();
+const Database = require("better-sqlite3");
 const path = require("path");
 const { app } = require("electron");
+const fs = require("fs");
 
 class DatabaseManager {
   constructor() {
     // Create database in user data directory
     const userDataPath = app.getPath("userData");
+
+    // Ensure the directory exists
+    if (!fs.existsSync(userDataPath)) {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+
     this.dbPath = path.join(userDataPath, "vehicle_management.db");
 
-    this.db = new sqlite3.Database(this.dbPath, (err) => {
-      if (err) {
-        console.error("Error opening database:", err.message);
-      } else {
-        console.log("Connected to SQLite database at:", this.dbPath);
-        this.initializeDatabase();
-      }
-    });
+    console.log("Database will be created at:", this.dbPath);
+
+    try {
+      this.db = new Database(this.dbPath);
+      console.log("Connected to SQLite database at:", this.dbPath);
+      this.initializeDatabase();
+    } catch (err) {
+      console.error("Error opening database:", err.message);
+      throw err;
+    }
   }
 
   initializeDatabase() {
@@ -87,94 +96,80 @@ class DatabaseManager {
        GROUP BY strftime('%Y-%m', purchase_date)`,
     ];
 
-    createTables.forEach((sql) => {
-      this.db.run(sql, (err) => {
-        if (err) {
-          console.error("Error creating table/view:", err.message);
-        }
+    try {
+      createTables.forEach((sql) => {
+        this.db.exec(sql);
       });
-    });
+      console.log("Database tables and views created successfully");
+    } catch (err) {
+      console.error("Error creating tables/views:", err.message);
+      throw err;
+    }
   }
 
   // Purchase operations
   addPurchase(purchaseData) {
-    return new Promise((resolve, reject) => {
-      const sql = `INSERT INTO purchase_info 
+    try {
+      const stmt = this.db.prepare(`INSERT INTO purchase_info 
                    (purchase_date, model_name, chassis_no, color, purchase_price, transport_cost, accessories_cost)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                   VALUES (?, ?, ?, ?, ?, ?, ?)`);
 
-      this.db.run(
-        sql,
-        [
-          purchaseData.purchase_date,
-          purchaseData.model_name,
-          purchaseData.chassis_no,
-          purchaseData.color,
-          purchaseData.purchase_price,
-          purchaseData.transport_cost || 0,
-          purchaseData.accessories_cost || 0,
-        ],
-        function (err) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ id: this.lastID, changes: this.changes });
-          }
-        }
+      const result = stmt.run(
+        purchaseData.purchase_date,
+        purchaseData.model_name,
+        purchaseData.chassis_no,
+        purchaseData.color,
+        purchaseData.purchase_price,
+        purchaseData.transport_cost || 0,
+        purchaseData.accessories_cost || 0
       );
-    });
+
+      return { id: result.lastInsertRowid, changes: result.changes };
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Sale operations
   addSale(saleData) {
-    return new Promise((resolve, reject) => {
-      const sql = `INSERT INTO sales_info 
+    try {
+      const stmt = this.db.prepare(`INSERT INTO sales_info 
                    (chassis_no, customer_name, sale_date, sales_price, insurance_cost, tax_registration_cost, registration_date, payment_type)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
 
-      this.db.run(
-        sql,
-        [
-          saleData.chassis_no,
-          saleData.customer_name,
-          saleData.sale_date,
-          saleData.sales_price,
-          saleData.insurance_cost || 0,
-          saleData.tax_registration_cost || 0,
-          saleData.registration_date,
-          saleData.payment_type,
-        ],
-        function (err) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ id: this.lastID, changes: this.changes });
-          }
-        }
+      const result = stmt.run(
+        saleData.chassis_no,
+        saleData.customer_name,
+        saleData.sale_date,
+        saleData.sales_price,
+        saleData.insurance_cost || 0,
+        saleData.tax_registration_cost || 0,
+        saleData.registration_date,
+        saleData.payment_type
       );
-    });
+
+      return { id: result.lastInsertRowid, changes: result.changes };
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Get available vehicles (not sold)
   getAvailableVehicles() {
-    return new Promise((resolve, reject) => {
-      const sql = `SELECT * FROM purchase_info 
+    try {
+      const stmt = this.db.prepare(`SELECT * FROM purchase_info 
                    WHERE chassis_no NOT IN (SELECT chassis_no FROM sales_info)
-                   ORDER BY purchase_date DESC`;
+                   ORDER BY purchase_date DESC`);
 
-      this.db.all(sql, [], (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      return stmt.all();
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Get profit report with filters
   getProfitReport(filters = {}) {
-    return new Promise((resolve, reject) => {
+    try {
       let sql = "SELECT * FROM vehicle_profit_view WHERE 1=1";
       const params = [];
 
@@ -200,118 +195,103 @@ class DatabaseManager {
 
       sql += " ORDER BY sale_date DESC";
 
-      this.db.all(sql, params, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      const stmt = this.db.prepare(sql);
+      return stmt.all(...params);
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Get monthly summary
   getMonthlySummary(month) {
-    return new Promise((resolve, reject) => {
-      const sql = "SELECT * FROM monthly_profit_summary WHERE month = ?";
+    try {
+      const stmt = this.db.prepare(
+        "SELECT * FROM monthly_profit_summary WHERE month = ?"
+      );
+      const result = stmt.get(month);
 
-      this.db.get(sql, [month], (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(
-            row || {
-              month,
-              total_vehicles_sold: 0,
-              total_profit: 0,
-              avg_profit_percent: 0,
-            }
-          );
+      return (
+        result || {
+          month,
+          total_vehicles_sold: 0,
+          total_profit: 0,
+          avg_profit_percent: 0,
         }
-      });
-    });
+      );
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Get dashboard data
   getDashboardData() {
-    return new Promise((resolve, reject) => {
+    try {
       const queries = {
-        totalVehicles: "SELECT COUNT(*) as count FROM purchase_info",
-        availableVehicles:
-          "SELECT COUNT(*) as count FROM purchase_info WHERE chassis_no NOT IN (SELECT chassis_no FROM sales_info)",
-        soldVehicles: "SELECT COUNT(*) as count FROM sales_info",
-        totalProfit: "SELECT SUM(profit) as total FROM vehicle_profit_view",
-        monthlyData:
-          "SELECT * FROM monthly_profit_summary ORDER BY month DESC LIMIT 6",
+        totalVehicles: this.db.prepare(
+          "SELECT COUNT(*) as count FROM purchase_info"
+        ),
+        availableVehicles: this.db.prepare(
+          "SELECT COUNT(*) as count FROM purchase_info WHERE chassis_no NOT IN (SELECT chassis_no FROM sales_info)"
+        ),
+        soldVehicles: this.db.prepare(
+          "SELECT COUNT(*) as count FROM sales_info"
+        ),
+        totalProfit: this.db.prepare(
+          "SELECT SUM(profit) as total FROM vehicle_profit_view"
+        ),
+        monthlyData: this.db.prepare(
+          "SELECT * FROM monthly_profit_summary ORDER BY month DESC LIMIT 6"
+        ),
       };
 
       const results = {};
-      let completed = 0;
-      const totalQueries = Object.keys(queries).length;
+      results.totalVehicles = queries.totalVehicles.get();
+      results.availableVehicles = queries.availableVehicles.get();
+      results.soldVehicles = queries.soldVehicles.get();
+      results.totalProfit = queries.totalProfit.get();
+      results.monthlyData = queries.monthlyData.all();
 
-      Object.entries(queries).forEach(([key, sql]) => {
-        if (key === "monthlyData") {
-          this.db.all(sql, [], (err, rows) => {
-            if (err) {
-              reject(err);
-            } else {
-              results[key] = rows;
-              completed++;
-              if (completed === totalQueries) resolve(results);
-            }
-          });
-        } else {
-          this.db.get(sql, [], (err, row) => {
-            if (err) {
-              reject(err);
-            } else {
-              results[key] = row;
-              completed++;
-              if (completed === totalQueries) resolve(results);
-            }
-          });
-        }
-      });
-    });
+      return results;
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Search vehicles
   searchVehicles(searchTerm) {
-    return new Promise((resolve, reject) => {
-      const sql = `SELECT p.*, s.customer_name, s.sale_date, s.payment_type
+    try {
+      const stmt = this.db
+        .prepare(`SELECT p.*, s.customer_name, s.sale_date, s.payment_type
                    FROM purchase_info p
                    LEFT JOIN sales_info s ON p.chassis_no = s.chassis_no
                    WHERE p.chassis_no LIKE ? OR p.model_name LIKE ? OR p.color LIKE ? OR s.customer_name LIKE ?
-                   ORDER BY p.purchase_date DESC`;
+                   ORDER BY p.purchase_date DESC`);
 
       const searchPattern = `%${searchTerm}%`;
-
-      this.db.all(
-        sql,
-        [searchPattern, searchPattern, searchPattern, searchPattern],
-        (err, rows) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(rows);
-          }
-        }
+      return stmt.all(
+        searchPattern,
+        searchPattern,
+        searchPattern,
+        searchPattern
       );
-    });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Get database path for debugging
+  getDatabasePath() {
+    return this.dbPath;
   }
 
   // Close database connection
   close() {
-    return new Promise((resolve) => {
-      this.db.close((err) => {
-        if (err) {
-          console.error("Error closing database:", err.message);
-        } else {
-          console.log("Database connection closed.");
-        }
-        resolve();
-      });
-    });
+    try {
+      this.db.close();
+      console.log("Database connection closed.");
+    } catch (err) {
+      console.error("Error closing database:", err.message);
+    }
   }
 }
 
