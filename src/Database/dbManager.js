@@ -44,9 +44,8 @@ class DatabaseManager {
         payment_type TEXT CHECK (payment_type IN ('cash', 'disbursment', 'bank_transfer', 'return_vehicle')),
         FOREIGN KEY (chassis_no) REFERENCES purchase_info(chassis_no) ON DELETE CASCADE
       )`,
-      // The trigger for return_vehicle is removed. This will now be handled by application logic.
       `DROP TRIGGER IF EXISTS trg_return_vehicle_delete`,
-      // Updated view to include insurance and tax costs for the report
+      // MODIFIED: Updated view to set profit to 0 for returned vehicles.
       `CREATE VIEW IF NOT EXISTS vehicle_profit_view AS
       SELECT
         p.chassis_no,
@@ -61,13 +60,19 @@ class DatabaseManager {
         p.accessories_cost,
         s.insurance_cost,
         s.tax_registration_cost,
-        (s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0))) AS profit,
         CASE
-          WHEN (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)) = 0 THEN 0
-          ELSE ROUND(
-            ((s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0))) * 100.0) /
-            (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)), 2
-          )
+            WHEN s.payment_type = 'return_vehicle' THEN 0
+            ELSE (s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + 
+            COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)))
+
+        END AS profit,
+        CASE
+            WHEN s.payment_type = 'return_vehicle' THEN 0
+            WHEN (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)) = 0 THEN 0
+            ELSE ROUND(
+                ((s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0))) * 100.0) /
+                (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)), 2
+            )
         END AS profit_percentage
       FROM purchase_info p
       JOIN sales_info s ON p.chassis_no = s.chassis_no`,
@@ -87,7 +92,9 @@ class DatabaseManager {
   // --- Validation ---
   _validateSaleDate(chassis_no, sale_date) {
     const purchase = this.db
-      .prepare("SELECT purchase_date FROM purchase_info WHERE chassis_no = ?")
+      .prepare(
+        "SELECT purchase_date, purchase_price FROM purchase_info WHERE chassis_no = ?"
+      )
       .get(chassis_no);
     if (!purchase) {
       throw new Error(`Vehicle with chassis no ${chassis_no} not found.`);
@@ -95,6 +102,7 @@ class DatabaseManager {
     if (new Date(sale_date) < new Date(purchase.purchase_date)) {
       throw new Error("Sale date cannot be earlier than the purchase date.");
     }
+    return purchase;
   }
 
   // --- Purchase Operations ---
@@ -123,10 +131,21 @@ class DatabaseManager {
 
   // --- Sale Operations ---
   addSale(data) {
-    this._validateSaleDate(data.chassis_no, data.sale_date);
+    const purchase = this._validateSaleDate(data.chassis_no, data.sale_date);
+
+    // If the vehicle is being returned, override sale data with return logic
+    if (data.payment_type === "return_vehicle") {
+      data.customer_name = "RETURNED";
+      data.sales_price = purchase.purchase_price;
+      data.insurance_cost = 0;
+      data.tax_registration_cost = 0;
+      data.registration_date = null;
+    }
+
     const stmt = this.db.prepare(`INSERT INTO sales_info 
         (chassis_no, customer_name, sale_date, sales_price, insurance_cost, tax_registration_cost, registration_date, payment_type)
         VALUES (@chassis_no, @customer_name, @sale_date, @sales_price, @insurance_cost, @tax_registration_cost, @registration_date, @payment_type)`);
+
     return stmt.run({
       ...data,
       insurance_cost: data.insurance_cost || 0,
@@ -150,10 +169,13 @@ class DatabaseManager {
   }
 
   returnVehicle({ chassis_no, sale_date }) {
-    this._validateSaleDate(chassis_no, sale_date);
-    const purchase = this.db
-      .prepare("SELECT purchase_price FROM purchase_info WHERE chassis_no = ?")
-      .get(chassis_no);
+    const purchase = this._validateSaleDate(chassis_no, sale_date);
+
+    if (!purchase) {
+      throw new Error(
+        `Vehicle with chassis no ${chassis_no} not found for return.`
+      );
+    }
 
     const saleData = {
       chassis_no: chassis_no,
@@ -237,7 +259,7 @@ class DatabaseManager {
 
   searchVehicles(searchTerm) {
     const stmt = this.db.prepare(`
-        SELECT p.*, s.customer_name, s.sale_date
+        SELECT p.*, s.customer_name, s.sale_date, s.payment_type
         FROM purchase_info p
         LEFT JOIN sales_info s ON p.chassis_no = s.chassis_no
         WHERE p.chassis_no LIKE ? OR p.model_name LIKE ? OR s.customer_name LIKE ?

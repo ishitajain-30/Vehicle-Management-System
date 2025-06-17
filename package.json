@@ -19,8 +19,8 @@
     "electron",
     "sqlite"
   ],
-  "author": "Gyan Infotech",
-  "license": "MIT",
+  "author": "Gyan Automobile",
+  "license": "Gyan Automobile",
   "devDependencies": {
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4",
