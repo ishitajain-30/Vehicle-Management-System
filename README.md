@@ -105,7 +105,7 @@ The application automatically creates the following database structure:
 
 2. **sales_info**
    - chassis_no (FK), customer_name, sale_date, sales_price
-   - insurance_cost, tax_registration_cost, registration_date, payment_type
+   - insurance_cost, tax_cost, registration_cost,other_expense_cost, registration_date, payment_type
 
 ### Views
 

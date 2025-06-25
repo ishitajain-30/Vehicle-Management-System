@@ -39,9 +39,11 @@ class DatabaseManager {
         sale_date TEXT NOT NULL,
         sales_price REAL,
         insurance_cost REAL,
-        tax_registration_cost REAL,
+        tax_cost REAL,
+        registration_cost REAL,
+        other_expense_cost REAL,
         registration_date TEXT,
-        payment_type TEXT CHECK (payment_type IN ('cash', 'disbursment', 'bank_transfer', 'return_vehicle')),
+        payment_type TEXT CHECK (payment_type IN ('cash', 'disbursment', 'cheque','bank_transfer', 'return_vehicle')),
         FOREIGN KEY (chassis_no) REFERENCES purchase_info(chassis_no) ON DELETE CASCADE
       )`,
       `DROP TRIGGER IF EXISTS trg_return_vehicle_delete`,
@@ -59,19 +61,21 @@ class DatabaseManager {
         p.transport_cost,
         p.accessories_cost,
         s.insurance_cost,
-        s.tax_registration_cost,
+        s.tax_cost,
+        s.registration_cost,
+        s.other_expense_cost,
         CASE
             WHEN s.payment_type = 'return_vehicle' THEN 0
             ELSE (s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + 
-            COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)))
+            COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_cost, 0) + COALESCE(s.registration_cost, 0) + COALESCE(s.other_expense, 0)))
 
         END AS profit,
         CASE
             WHEN s.payment_type = 'return_vehicle' THEN 0
-            WHEN (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)) = 0 THEN 0
+            WHEN (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_cost, 0) + COALESCE(s.registration_cost, 0) + COALESCE(s.other_expense_cost, 0)) = 0 THEN 0
             ELSE ROUND(
-                ((s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0))) * 100.0) /
-                (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_registration_cost, 0)), 2
+                ((s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_cost, 0) + COALESCE(s.registration_cost, 0) + COALESCE(s.other_expense_cost, 0))) * 100.0) /
+                (p.purchase_price + COALESCE(p.transport_cost, 0) + COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_cost, 0) + COALESCE(s.registration_cost, 0) + COALESCE(s.other_expense_cost, 0)), 2
             )
         END AS profit_percentage
       FROM purchase_info p
@@ -138,18 +142,22 @@ class DatabaseManager {
       data.customer_name = "RETURNED";
       data.sales_price = purchase.purchase_price;
       data.insurance_cost = 0;
-      data.tax_registration_cost = 0;
+      data.tax_cost = 0;
+      data.registration_cost = 0;
+      data.other_expense_cost = 0;
       data.registration_date = null;
     }
 
     const stmt = this.db.prepare(`INSERT INTO sales_info 
-        (chassis_no, customer_name, sale_date, sales_price, insurance_cost, tax_registration_cost, registration_date, payment_type)
-        VALUES (@chassis_no, @customer_name, @sale_date, @sales_price, @insurance_cost, @tax_registration_cost, @registration_date, @payment_type)`);
+        (chassis_no, customer_name, sale_date, sales_price, insurance_cost, tax_cost, registration_cost, other_expense_cost, registration_date, payment_type)
+        VALUES (@chassis_no, @customer_name, @sale_date, @sales_price, @insurance_cost, @tax_cost, @registration_cost, @other_expense_cost, @registration_date, @payment_type)`);
 
     return stmt.run({
       ...data,
       insurance_cost: data.insurance_cost || 0,
-      tax_registration_cost: data.tax_registration_cost || 0,
+      tax_cost: data.tax_cost || 0,
+      registration_cost: data.registration_cost || 0,
+      other_expense_cost: data.other_expense_cost || 0,
       registration_date: data.registration_date || null,
     });
   }
@@ -161,7 +169,9 @@ class DatabaseManager {
         sale_date = @sale_date,
         sales_price = @sales_price,
         insurance_cost = @insurance_cost,
-        tax_registration_cost = @tax_registration_cost,
+        tax_cost = @tax_cost,
+        registration_cost = @registration_cost,
+        other_expense_cost = @other_expense_cost,
         registration_date = @registration_date,
         payment_type = @payment_type
         WHERE chassis_no = @chassis_no`);
@@ -183,14 +193,16 @@ class DatabaseManager {
       sale_date: sale_date,
       sales_price: purchase.purchase_price,
       insurance_cost: 0,
-      tax_registration_cost: 0,
+      tax_cost: 0,
+      registration_cost: 0,
+      other_expense_cost: 0,
       registration_date: null,
       payment_type: "return_vehicle",
     };
 
     const stmt = this.db.prepare(`INSERT INTO sales_info 
-        (chassis_no, customer_name, sale_date, sales_price, insurance_cost, tax_registration_cost, registration_date, payment_type)
-        VALUES (@chassis_no, @customer_name, @sale_date, @sales_price, @insurance_cost, @tax_registration_cost, @registration_date, @payment_type)`);
+        (chassis_no, customer_name, sale_date, sales_price, insurance_cost, tax_cost,registration_cost, other_expense_cost,registration_date, payment_type)
+        VALUES (@chassis_no, @customer_name, @sale_date, @sales_price, @insurance_cost, @tax_cost, @registration_cost, @other_expense_cost, @registration_date, @payment_type)`);
 
     return stmt.run(saleData);
   }
@@ -198,7 +210,7 @@ class DatabaseManager {
   // --- Read Operations ---
   getVehicleByChassis(chassisNo) {
     const stmt = this.db.prepare(`
-          SELECT p.*, s.customer_name, s.sale_date, s.sales_price, s.insurance_cost, s.tax_registration_cost, s.registration_date, s.payment_type
+          SELECT p.*, s.customer_name, s.sale_date, s.sales_price, s.insurance_cost, s.tax_cost,s.registration_cost, s.other_expense_cost, s.registration_date, s.payment_type
           FROM purchase_info p
           LEFT JOIN sales_info s ON p.chassis_no = s.chassis_no
           WHERE p.chassis_no = ?
