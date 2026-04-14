@@ -1,5 +1,11 @@
 const { ipcRenderer } = require("electron");
 let dashboardData = {};
+let currentUser = null;
+let reportScope = "full";
+
+function isAdminUser() {
+  return currentUser?.role === "admin";
+}
 
 // --- Theme Switcher Logic ---
 function setTheme(theme) {
@@ -19,35 +25,131 @@ function setTheme(theme) {
 }
 
 // --- Core App Initialization ---
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // Theme initialization
   const lightBtn = document.getElementById("theme-toggle-light");
   const darkBtn = document.getElementById("theme-toggle-dark");
-  const currentTheme = document.documentElement.classList.contains("dark-mode");
-  setTheme(currentTheme ? "dark" : "light");
+  const themeIsDark = document.documentElement.classList.contains("dark-mode");
+  setTheme(themeIsDark ? "dark" : "light");
 
-  lightBtn.addEventListener("click", () => setTheme("light"));
-  darkBtn.addEventListener("click", () => setTheme("dark"));
+  lightBtn?.addEventListener("click", () => setTheme("light"));
+  darkBtn?.addEventListener("click", () => setTheme("dark"));
+
+  // Auth initialization
+  await initializeAuth();
+});
+
+async function initializeAuth() {
+  try {
+    const res = await ipcRenderer.invoke("auth-get-current-user");
+    if (res.success) {
+      currentUser = res.data;
+      setupAppForUser();
+    } else {
+      showLogin();
+    }
+  } catch {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById("loginContainer").style.display = "flex";
+  document.getElementById("appContainer").style.display = "none";
+
+  const loginForm = document.getElementById("loginForm");
+  loginForm.onsubmit = handleLoginSubmit;
+}
+
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const res = await ipcRenderer.invoke("auth-login", data);
+    if (!res.success) {
+      showMessage("Login Failed", res.error || "Invalid credentials", "error");
+      showLogin(); // reattach listener
+      return;
+    }
+    currentUser = res.data;
+    setupAppForUser();
+  } catch (error) {
+    showMessage("Error", `Login failed: ${error.message}`, "error");
+    showLogin();
+  }
+}
+
+async function handleLogout() {
+  await ipcRenderer.invoke("auth-logout");
+  currentUser = null;
+  document.getElementById("appContainer").style.display = "none";
+  showLogin();
+}
+
+function setupAppForUser() {
+  document.getElementById("loginContainer").style.display = "none";
+  document.getElementById("appContainer").style.display = "flex";
+
+  const userInfo = document.getElementById("currentUserInfo");
+  const userLabel = document.getElementById("currentUserLabel");
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (userInfo && userLabel && logoutBtn) {
+    userInfo.style.display = "flex";
+    userLabel.textContent = `${currentUser.username} (${currentUser.role})`;
+    logoutBtn.onclick = handleLogout;
+  }
+
+  // Role-based navigation
+  const isAdmin = isAdminUser();
+  const navPurchase = document.getElementById("navPurchase");
+  const navReports = document.getElementById("navReports");
+  if (navPurchase) {
+    navPurchase.style.display = "";
+  }
+  if (!isAdmin && navReports) {
+    navReports.style.display = "";
+  }
+
+  // Toggle admin-only columns visibility
+  document
+    .querySelectorAll(".admin-only-col")
+    .forEach(
+      (th) => (th.style.display = isAdmin ? "table-cell" : "none")
+    );
 
   // App initialization
+  renderForms();
+  // Always land on dashboard after login.
+  document
+    .querySelectorAll(".content-section")
+    .forEach((section) => section.classList.remove("active"));
+  document
+    .querySelectorAll(".nav-item")
+    .forEach((item) => item.classList.remove("active"));
+  document.getElementById("dashboard").classList.add("active");
+  const dashboardNav = document.querySelector(
+    '.nav-item[onclick*="showSection(\'dashboard\'"]'
+  );
+  if (dashboardNav) dashboardNav.classList.add("active");
+
   loadDashboard();
   loadAvailableVehicles();
   populateYearFilter();
-  renderForms();
 
-  // Form submit listeners
-  document
-    .getElementById("purchaseForm")
-    .addEventListener("submit", handlePurchaseSubmit);
-  document
-    .getElementById("saleForm")
-    .addEventListener("submit", handleSaleSubmit);
-  document
-    .getElementById("editPurchaseForm")
-    .addEventListener("submit", handleUpdatePurchase);
-  document
-    .getElementById("editSaleForm")
-    .addEventListener("submit", handleUpdateSale);
+  // Form submit listeners (respect role)
+  const purchaseForm = document.getElementById("purchaseForm");
+  const saleForm = document.getElementById("saleForm");
+  if (purchaseForm) {
+    purchaseForm.onsubmit = handlePurchaseSubmit;
+  }
+  if (saleForm) {
+    saleForm.onsubmit = handleSaleSubmit;
+  }
+  const editVehicleForm = document.getElementById("editVehicleForm");
+  if (editVehicleForm) {
+    editVehicleForm.onsubmit = handleUpdateVehicle;
+  }
 
   // Global search listener
   let searchTimeout;
@@ -55,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(handleGlobalSearch, 300);
   });
-});
+}
 
 // --- Section Management ---
 function showSection(sectionName, navElement) {
@@ -222,10 +324,7 @@ function renderDashboardCards() {
         }</h3><p>Available Vehicles</p></div>
         <div class="dashboard-card"><h3>${
           dashboardData.soldVehicles?.count || 0
-        }</h3><p>Sold Vehicles</p></div>
-        <div class="dashboard-card"><h3>₹${(
-          dashboardData.totalProfit?.total || 0
-        ).toLocaleString()}</h3><p>Total Profit</p></div>`;
+        }</h3><p>Sold Vehicles</p></div>`;
 }
 
 async function handleGlobalSearch() {
@@ -313,15 +412,16 @@ async function handleUpdateVehicle(e) {
   const formData = Object.fromEntries(new FormData(form).entries());
 
   try {
-    // Always update purchase info
-    const purchaseResult = await ipcRenderer.invoke(
-      "db-update-purchase",
-      formData
-    );
-    if (!purchaseResult.success) {
-      throw new Error(
-        `Failed to update purchase info: ${purchaseResult.error}`
+    if (isAdminUser()) {
+      const purchaseResult = await ipcRenderer.invoke(
+        "db-update-purchase",
+        formData
       );
+      if (!purchaseResult.success) {
+        throw new Error(
+          `Failed to update purchase info: ${purchaseResult.error}`
+        );
+      }
     }
 
     // If a sale date exists, update/insert sale info
@@ -379,6 +479,7 @@ async function openEditVehicleModal(chassisNo) {
   }
   const v = result.data;
   const isSold = !!v.sale_date;
+  const isAdmin = isAdminUser();
 
   const formHTML = `
         <input type="hidden" name="chassis_no" value="${v.chassis_no}" />
@@ -389,25 +490,27 @@ async function openEditVehicleModal(chassisNo) {
                 <label>Purchase Date</label>
                 <input type="date" name="purchase_date" value="${formatDate(
                   v.purchase_date
-                )}" required>
+                )}" required ${!isAdmin ? "disabled" : ""}>
             </div>
             <div class="form-group">
                 <label>Model Name</label>
                 <input type="text" name="model_name" value="${
                   v.model_name
-                }" required>
+                }" required ${!isAdmin ? "disabled" : ""}>
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
                 <label>Color</label>
-                <input type="text" name="color" value="${v.color || ""}">
+                <input type="text" name="color" value="${v.color || ""}" ${
+                  !isAdmin ? "disabled" : ""
+                }>
             </div>
             <div class="form-group">
                 <label>Purchase Price</label>
                 <input type="number" name="purchase_price" value="${
                   v.purchase_price
-                }" step="0.01" required>
+                }" step="0.01" required ${!isAdmin ? "disabled" : ""}>
             </div>
         </div>
         <div class="form-row">
@@ -415,13 +518,13 @@ async function openEditVehicleModal(chassisNo) {
                 <label>Transport Cost</label>
                 <input type="number" name="transport_cost" value="${
                   v.transport_cost || 0
-                }" step="0.01">
+                }" step="0.01" ${!isAdmin ? "disabled" : ""}>
             </div>
             <div class="form-group">
                 <label>Accessories Cost</label>
                 <input type="number" name="accessories_cost" value="${
                   v.accessories_cost || 0
-                }" step="0.01">
+                }" step="0.01" ${!isAdmin ? "disabled" : ""}>
             </div>
         </div>
         
@@ -615,6 +718,7 @@ async function applyFilters() {
   });
   const result = await ipcRenderer.invoke("db-get-profit-report", filters);
   if (result.success) {
+    reportScope = result.scope || "full";
     renderReportsTable(result.data);
   } else {
     showMessage("Error", `Failed to apply filters: ${result.error}`, "error");
@@ -624,20 +728,40 @@ async function applyFilters() {
 function renderReportsTable(reports) {
   const tbody = document.getElementById("reportsTableBody");
   tbody.innerHTML = "";
+
+  const money = (value) => `₹${Number(value ?? 0).toLocaleString()}`;
+  const pct = (value) => `${Number(value ?? 0)}%`;
+
   reports.forEach((r) => {
-    const profitClass = r.profit >= 0 ? "profit-positive" : "profit-negative";
-    tbody.insertRow().innerHTML = `<td>${r.chassis_no}</td><td>${
-      r.model_name
-    }</td><td>${r.customer_name}</td>
+    if (reportScope === "limited") {
+      tbody.insertRow().innerHTML = `<td>${r.chassis_no}</td><td>${
+        r.model_name
+      }</td><td>${r.customer_name || "-"}</td>
             <td>${formatDate(r.sale_date)}</td>
-            <td>₹${r.sales_price?.toLocaleString()}</td>
-            <td>₹${r.insurance_cost?.toLocaleString()}</td>
-            <td>₹${r.tax_cost?.toLocaleString()}</td>
-            <td>₹${r.registration_cost?.toLocaleString()}</td>
-            <td>₹${r.other_expense_cost?.toLocaleString()}</td>
-            <td class="${profitClass}">₹${r.profit?.toLocaleString()}</td>
-            <td class="${profitClass}">${r.profit_percentage}%</td>
+            <td style="display:none"></td>
+            <td style="display:none"></td>
+            <td style="display:none"></td>
+            <td style="display:none"></td>
+            <td style="display:none"></td>
             <td>${r.payment_type}</td>`;
+    } else {
+      const profitClass =
+        (r.profit || 0) >= 0 ? "profit-positive" : "profit-negative";
+      const totalTaxRegCost =
+        Number(r.tax_cost ?? 0) +
+        Number(r.registration_cost ?? 0) +
+        Number(r.other_expense_cost ?? 0);
+      tbody.insertRow().innerHTML = `<td>${r.chassis_no}</td><td>${
+        r.model_name
+      }</td><td>${r.customer_name}</td>
+            <td>${formatDate(r.sale_date)}</td>
+            <td>${money(r.sales_price)}</td>
+            <td>${money(r.insurance_cost)}</td>
+            <td>${money(totalTaxRegCost)}</td>
+            <td class="${profitClass}">${money(r.profit)}</td>
+            <td class="${profitClass}">${pct(r.profit_percentage)}</td>
+            <td>${r.payment_type}</td>`;
+    }
   });
 }
 

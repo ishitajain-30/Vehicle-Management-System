@@ -25,7 +25,38 @@
     </script>
   </head>
   <body>
-    <div class="app-container">
+    <div id="loginContainer" class="login-container" style="display: none">
+      <div class="login-card">
+        <h2>Sign in</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginUsername">Username</label>
+            <input
+              type="text"
+              id="loginUsername"
+              name="username"
+              autocomplete="username"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input
+              type="password"
+              id="loginPassword"
+              name="password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Login</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="appContainer" class="app-container" style="display: none">
       <nav class="sidebar">
         <div>
           <div class="sidebar-header">
@@ -44,21 +75,47 @@
             >
               <a><span class="nav-icon">📊</span>Dashboard</a>
             </li>
-            <li class="nav-item" onclick="showSection('purchase', this)">
+            <li
+              class="nav-item"
+              id="navPurchase"
+              onclick="showSection('purchase', this)"
+            >
               <a><span class="nav-icon">➕</span>Add Purchase</a>
             </li>
-            <li class="nav-item" onclick="showSection('sale', this)">
+            <li
+              class="nav-item"
+              id="navSale"
+              onclick="showSection('sale', this)"
+            >
               <a><span class="nav-icon">💰</span>Add Sale</a>
             </li>
-            <li class="nav-item" onclick="showSection('inventory', this)">
+            <li
+              class="nav-item"
+              id="navInventory"
+              onclick="showSection('inventory', this)"
+            >
               <a><span class="nav-icon">📦</span>Inventory</a>
             </li>
-            <li class="nav-item" onclick="showSection('reports', this)">
+            <li
+              class="nav-item"
+              id="navReports"
+              onclick="showSection('reports', this)"
+            >
               <a><span class="nav-icon">📈</span>Reports</a>
             </li>
           </ul>
         </div>
         <div class="sidebar-footer">
+          <div id="currentUserInfo" class="current-user" style="display: none">
+            <span id="currentUserLabel"></span>
+            <button
+              type="button"
+              class="btn btn-secondary btn-small"
+              id="logoutBtn"
+            >
+              Logout
+            </button>
+          </div>
           <div class="theme-switcher">
             <button id="theme-toggle-light" class="theme-btn">
               <svg
@@ -221,11 +278,11 @@
                   <th>Model</th>
                   <th>Customer</th>
                   <th>Sale Date</th>
-                  <th>Sale Price</th>
-                  <th>Insurance Cost</th>
-                  <th>Tax/Reg Cost</th>
-                  <th>Profit</th>
-                  <th>Profit %</th>
+                  <th class="admin-only-col">Sale Price</th>
+                  <th class="admin-only-col">Insurance Cost</th>
+                  <th class="admin-only-col">Tax/Reg Cost</th>
+                  <th class="admin-only-col">Profit</th>
+                  <th class="admin-only-col">Profit %</th>
                   <th>Payment Type</th>
                 </tr>
               </thead>

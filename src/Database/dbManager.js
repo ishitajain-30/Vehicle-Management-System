@@ -46,9 +46,17 @@ class DatabaseManager {
         payment_type TEXT CHECK (payment_type IN ('cash', 'disbursment', 'cheque','bank_transfer', 'return_vehicle')),
         FOREIGN KEY (chassis_no) REFERENCES purchase_info(chassis_no) ON DELETE CASCADE
       )`,
+      `CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('admin','staff')),
+        is_active INTEGER NOT NULL DEFAULT 1
+      )`,
       `DROP TRIGGER IF EXISTS trg_return_vehicle_delete`,
+      `DROP VIEW IF EXISTS vehicle_profit_view`,
       // MODIFIED: Updated view to set profit to 0 for returned vehicles.
-      `CREATE VIEW IF NOT EXISTS vehicle_profit_view AS
+      `CREATE VIEW vehicle_profit_view AS
       SELECT
         p.chassis_no,
         p.model_name,
@@ -67,7 +75,7 @@ class DatabaseManager {
         CASE
             WHEN s.payment_type = 'return_vehicle' THEN 0
             ELSE (s.sales_price - (p.purchase_price + COALESCE(p.transport_cost, 0) + 
-            COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_cost, 0) + COALESCE(s.registration_cost, 0) + COALESCE(s.other_expense, 0)))
+            COALESCE(p.accessories_cost, 0) + COALESCE(s.insurance_cost, 0) + COALESCE(s.tax_cost, 0) + COALESCE(s.registration_cost, 0) + COALESCE(s.other_expense_cost, 0)))
 
         END AS profit,
         CASE
@@ -86,10 +94,168 @@ class DatabaseManager {
       this.db.transaction(() => {
         createTables.forEach((sql) => this.db.exec(sql));
       })();
+      this._migrateSalesSchema();
+      this._migrateRbacSchema();
       console.log("Database tables and views created/updated successfully");
+      this._initializeRbacDefaults();
     } catch (err) {
       console.error("Error creating tables/views:", err.message);
       throw err;
+    }
+  }
+
+  // --- RBAC bootstrap: roles and default admin user ---
+  _migrateSalesSchema() {
+    const salesTable = this.db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sales_info'"
+      )
+      .get();
+    if (!salesTable) return;
+
+    const columns = this.db.prepare("PRAGMA table_info(sales_info)").all();
+    const colNames = new Set(columns.map((c) => c.name));
+
+    this.db.transaction(() => {
+      if (!colNames.has("insurance_cost")) {
+        this.db.exec("ALTER TABLE sales_info ADD COLUMN insurance_cost REAL");
+      }
+      if (!colNames.has("tax_cost")) {
+        this.db.exec("ALTER TABLE sales_info ADD COLUMN tax_cost REAL");
+      }
+      if (!colNames.has("registration_cost")) {
+        this.db.exec("ALTER TABLE sales_info ADD COLUMN registration_cost REAL");
+      }
+      if (!colNames.has("other_expense_cost")) {
+        this.db.exec(
+          "ALTER TABLE sales_info ADD COLUMN other_expense_cost REAL"
+        );
+      }
+      if (!colNames.has("registration_date")) {
+        this.db.exec("ALTER TABLE sales_info ADD COLUMN registration_date TEXT");
+      }
+      this.db.exec(
+        "UPDATE sales_info SET insurance_cost = 0 WHERE insurance_cost IS NULL"
+      );
+      this.db.exec("UPDATE sales_info SET tax_cost = 0 WHERE tax_cost IS NULL");
+      this.db.exec(
+        "UPDATE sales_info SET registration_cost = 0 WHERE registration_cost IS NULL"
+      );
+      this.db.exec(
+        "UPDATE sales_info SET other_expense_cost = 0 WHERE other_expense_cost IS NULL"
+      );
+    })();
+  }
+
+  _migrateRbacSchema() {
+    const usersTable = this.db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
+      )
+      .get();
+    if (!usersTable) return;
+
+    const columns = this.db.prepare("PRAGMA table_info(users)").all();
+    const colNames = new Set(columns.map((c) => c.name));
+    const usersTableSql = this.db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'")
+      .get();
+    const allowsEmployeeRole = !!usersTableSql?.sql?.includes("'employee'");
+    const canonicalStaffRole = allowsEmployeeRole ? "employee" : "staff";
+
+    this.db.transaction(() => {
+      if (!colNames.has("password")) {
+        this.db.exec("ALTER TABLE users ADD COLUMN password TEXT");
+      }
+      if (!colNames.has("role")) {
+        this.db.exec("ALTER TABLE users ADD COLUMN role TEXT");
+      }
+      if (!colNames.has("is_active")) {
+        this.db.exec("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1");
+      }
+      // Map role_id-based legacy records into role text.
+      if (colNames.has("role_id")) {
+        this.db.exec(
+          `UPDATE users SET role = CASE WHEN role_id = 1 THEN 'admin' ELSE '${canonicalStaffRole}' END WHERE role IS NULL OR role = ''`
+        );
+      }
+      if (allowsEmployeeRole) {
+        this.db.exec("UPDATE users SET role = 'employee' WHERE LOWER(role) = 'staff'");
+      } else {
+        this.db.exec("UPDATE users SET role = 'staff' WHERE LOWER(role) = 'employee'");
+      }
+      this.db.exec(
+        `UPDATE users SET role = '${canonicalStaffRole}' WHERE role IS NULL OR role = ''`
+      );
+      this.db.exec(
+        "UPDATE users SET password = CASE WHEN LOWER(username) = 'admin' THEN 'admin123' ELSE 'staff123' END WHERE password IS NULL OR password = ''"
+      );
+      this.db.exec("UPDATE users SET is_active = 1 WHERE is_active IS NULL");
+    })();
+  }
+
+  _initializeRbacDefaults() {
+    try {
+      const cols = this.db.prepare("PRAGMA table_info(users)").all();
+      const colNames = new Set(cols.map((c) => c.name));
+      const hasRoleId = colNames.has("role_id");
+      const hasPasswordHash = colNames.has("password_hash");
+      const usersTableSql = this.db
+        .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'")
+        .get();
+      const allowsEmployeeRole = !!usersTableSql?.sql?.includes("'employee'");
+      const staffRoleValue = allowsEmployeeRole ? "employee" : "staff";
+
+      // Keep only admin and staff users as requested.
+      this.db
+        .prepare("DELETE FROM users WHERE LOWER(username) NOT IN ('admin', 'staff')")
+        .run();
+
+      const upsertUser = (username, password, roleText) => {
+        const existing = this.db
+          .prepare("SELECT id FROM users WHERE LOWER(username) = ?")
+          .get(username);
+        if (existing) {
+          const sets = ["username = ?", "password = ?", "role = ?", "is_active = 1"];
+          const values = [username, password, roleText];
+          if (hasRoleId) {
+            sets.push("role_id = ?");
+            values.push(roleText === "admin" ? 1 : 2);
+          }
+          if (hasPasswordHash) {
+            sets.push("password_hash = NULL");
+          }
+          values.push(existing.id);
+          this.db
+            .prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`)
+            .run(...values);
+        } else {
+          const fields = ["username", "password", "role", "is_active"];
+          const placeholders = ["?", "?", "?", "1"];
+          const values = [username, password, roleText];
+          if (hasRoleId) {
+            fields.push("role_id");
+            placeholders.push("?");
+            values.push(roleText === "admin" ? 1 : 2);
+          }
+          if (hasPasswordHash) {
+            fields.push("password_hash");
+            placeholders.push("NULL");
+          }
+          this.db
+            .prepare(
+              `INSERT INTO users (${fields.join(", ")}) VALUES (${placeholders.join(
+                ", "
+              )})`
+            )
+            .run(...values);
+        }
+      };
+
+      upsertUser("admin", "admin123", "admin");
+      upsertUser("staff", "staff123", staffRoleValue);
+    } catch (err) {
+      console.error("Error initializing RBAC defaults:", err.message);
     }
   }
 
@@ -119,6 +285,31 @@ class DatabaseManager {
       transport_cost: data.transport_cost || 0,
       accessories_cost: data.accessories_cost || 0,
     });
+  }
+
+  // --- Auth / Users ---
+
+  getUserByUsername(username) {
+    const cols = this.db.prepare("PRAGMA table_info(users)").all();
+    const colNames = new Set(cols.map((c) => c.name));
+    if (colNames.has("role")) {
+      return this.db
+        .prepare(
+          `SELECT id, username, password,
+           CASE WHEN LOWER(role) = 'employee' THEN 'staff' ELSE role END AS role,
+           is_active
+           FROM users WHERE LOWER(username) = LOWER(?)`
+        )
+        .get(username);
+    }
+    return this.db
+      .prepare(
+        `SELECT u.id, u.username, u.password, u.is_active,
+         CASE WHEN u.role_id = 1 THEN 'admin' ELSE 'staff' END as role
+         FROM users u
+         WHERE LOWER(u.username) = LOWER(?)`
+      )
+      .get(username);
   }
 
   updatePurchase(data) {
